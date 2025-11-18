@@ -44,18 +44,6 @@ It merges **deterministic routing**, **AI reasoning**, and **machine-learned pre
 - JSONB models for alternatives & AI outputs  
 - Redis caching layer (Upstash/Redis Cloud)
 
-## 🧭 System Architecture
-```mermaid
-flowchart TD
-
-UI[Next.js + Tailwind<br>Client UI] --> API[NestJS API Gateway<br>(AI + Orchestration)]
-API --> SB[Spring Boot Routing Engine<br>Java 21 + Resilience4j]
-
-SB --> GM[Google Directions API<br>Drive/Transit/Walk]
-SB --> WP[OpenWeather API]
-API --> DB[(PostgreSQL)]
-API --> REDIS[(Redis Cache)]
-
 ---
 
 # ✅ **SECTION 4 — Tech Stack**

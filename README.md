@@ -46,9 +46,6 @@ It merges **deterministic routing**, **AI reasoning**, and **machine-learned pre
 
 ---
 
-# ✅ **SECTION 4 — Tech Stack**
-
-```markdown
 ## 🛠 Tech Stack
 
 ### Frontend

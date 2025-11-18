@@ -1,213 +1,109 @@
-# LeaveNow - Real-Time Commute Orchestrator
+# 🚀 LeaveNow — Real-Time Commute Orchestrator  
+*A polyglot routing system powered by Java Spring Boot, NestJS, Next.js, Redis, PostgreSQL, and OpenAI.*
 
-A production-minded backend that computes deterministic leave-by times by fusing live ETAs (drive/transit/walk) with user buffers (prep/parking/security) and weather, returning an explainable plan + reliability score.
+LeaveNow computes **deterministic, explainable leave-by times** using live Google Maps ETAs, weather conditions, traffic patterns, user buffers (prep → cab wait → parking → walk), and multimodal routing (Drive · Transit · Walk · Cab).  
+It merges **deterministic routing**, **AI reasoning**, and **machine-learned preferences** into a single intelligent commute planner.
 
-## Features
+## ✨ Features
 
-- 🚗 **Multi-Modal ETA Calculation**: Drive, Transit, and Walk modes via Google Maps
-- 🌦️ **Weather Integration**: Precipitation data from OpenWeather API
-- 🎯 **Smart Mode Selection**: Chooses optimal transport based on reliability and ETA
-- 💾 **PostgreSQL Persistence**: User preferences, venues, plans, and routines
-- ⚡ **Redis Caching**: 60s TTL for ETAs, 300s for weather data
-- 📊 **Swagger Documentation**: Interactive API docs at `/docs`
-- 🔄 **Background Jobs**: BullMQ for routine planning and re-planning
-- 🧪 **Stub Mode**: Works without API keys for testing
+### 🛰 Real-Time Routing & Multimodal Planning
+- Live ETAs from Google Maps Directions API  
+- Weather-aware slowdowns via OpenWeather (rain, visibility, conditions)  
+- Traffic-aware travel time estimation  
+- Buffers for prep-time, building exit time, cab wait time, parking/security delays  
+- Multi-modal comparison (Drive, Transit, Walk, Cab)
 
-## Tech Stack
+### 🧩 Polyglot Microservices (Java + Node)
+#### **Java Spring Boot Routing Engine**
+- Computes all ETAs, reliability scores, and buffer adjustments  
+- WebClient-based API calls + Resilience4j (retries, circuit breakers)  
+- Redis caching for ETAs and weather minute-buckets  
 
-- **Runtime**: Node.js 20+
-- **Framework**: NestJS
-- **Database**: PostgreSQL (Prisma ORM)
-- **Cache/Queue**: Redis (ioredis + BullMQ)
-- **HTTP Client**: Axios
-- **Docs**: Swagger/OpenAPI
+#### **NestJS API Gateway + AI Orchestrator**
+- Serves REST API for UI  
+- Routes compute requests to Spring Boot  
+- Integrates OpenAI for natural-language trip explanations & scenario analysis  
+- Handles user preferences, logging, and history
 
-## Quick Start
+### 💻 Next.js Frontend
+- Modern UI with Tailwind CSS  
+- Autocomplete using Google Places API  
+- Geolocation (“Use my current location”)  
+- Interactive trip results: reliability, buffers, alternatives, maps deep-links  
+- Weather + traffic indicators for origin & destination  
+- AI assistant sidebar (“Ask AI about this trip”)
 
-### Prerequisites
+### 🧠 AI/ML Intelligence
+- OpenAI GPT (tool calling) for natural-language trip reasoning  
+- LangChain/LangGraph pipeline for AI “what-if” modeling  
+- Historical commute analysis (pgvector optional)  
+- ML-based preference inference (prep time, walk tolerance)
 
-- Node.js 20+
-- PostgreSQL 16
-- Redis 7
+### 🗄 Persistence & Storage
+- PostgreSQL with Prisma ORM  
+- JSONB models for alternatives & AI outputs  
+- Redis caching layer (Upstash/Redis Cloud)
 
-### Installation
+## 🧭 System Architecture
+```mermaid
+flowchart TD
 
-```bash
-# Install dependencies
-npm install
+UI[Next.js + Tailwind<br>Client UI] --> API[NestJS API Gateway<br>(AI + Orchestration)]
+API --> SB[Spring Boot Routing Engine<br>Java 21 + Resilience4j]
 
-# Generate Prisma client
-npm run prisma:generate
+SB --> GM[Google Directions API<br>Drive/Transit/Walk]
+SB --> WP[OpenWeather API]
+API --> DB[(PostgreSQL)]
+API --> REDIS[(Redis Cache)]
 
-# Run database migrations
-npm run prisma:migrate
+---
 
-# Seed the database
-npm run prisma:seed
-```
+# ✅ **SECTION 4 — Tech Stack**
 
-### Environment Variables
+```markdown
+## 🛠 Tech Stack
 
-Create a `.env` file:
+### Frontend
+- Next.js 14 (App Router)
+- React 18
+- TypeScript
+- Tailwind CSS
+- Geolocation API
 
-```env
-PORT=8080
-NODE_ENV=development
+### Backend
+- Java 21 + Spring Boot 3 (Routing Engine)
+- Node.js + NestJS (Gateway + AI Layer)
+- Resilience4j (circuit breakers, retries)
+- Redis caching
+- Axios / WebClient
+- Prisma ORM
+- OpenAI GPT integration
+- LangChain / LangGraph for tool-calling flows
 
-DATABASE_URL=postgresql://user:password@localhost:5432/leavenow
-REDIS_URL=redis://localhost:6379
+### Database
+- PostgreSQL (Neon / Supabase / RDS)
+- Prisma ORM
+- JSONB columns
+- Optional: pgvector for semantic search
 
-GOOGLE_MAPS_API_KEY=your_key_here
-OPENWEATHER_API_KEY=your_key_here
+### Cloud / DevOps
+- Vercel (frontend)
+- Docker containers
+- GitHub Actions CI/CD
+- Railway / Render / AWS for backend
+- Redis Cloud / Upstash
 
-USE_STUBS=auto          # auto|true|false
-ENABLE_JOBS=true        # enables cron + background jobs
-```
+## 🤖 AI Assistant
 
-### Running
+The integrated AI assistant can:
+- Explain routing decisions in natural language  
+- Suggest alternatives (“Cab vs Transit vs Walk”)  
+- Run what-if simulations:
+  - “What if I leave in 20 minutes?”
+  - “What if it rains harder?”
+  - “What if I drive instead of taking a cab?”
 
-```bash
-# Development mode
-npm run start:dev
-
-# Production mode
-npm run build
-npm run start:prod
-
-# Docker Compose (all services)
-docker compose up --build
-```
-
-## API Endpoints
-
-### POST /api/plan
-
-Compute optimal leave-by time.
-
-**Request:**
-```json
-{
-  "origin": {"lat": 47.61, "lng": -122.33},
-  "destination": {"lat": 47.62, "lng": -122.35},
-  "arriveBy": "2025-11-12T18:30:00Z",
-  "prefsId": "optional-string"
-}
-```
-
-**Response:**
-```json
-{
-  "leaveBy": "2025-11-12T18:02:15Z",
-  "chosenMode": "TRANSIT",
-  "etaSeconds": 1675,
-  "reliability": 0.91,
-  "explain": "Light rain (+6%). Includes prep (10m).",
-  "alternatives": [
-    {"mode": "DRIVE", "etaSeconds": 1800, "reliability": 0.84},
-    {"mode": "WALK", "etaSeconds": 4200, "reliability": 0.99}
-  ]
-}
-```
-
-### GET /api/places
-
-Search for places using Google Places API.
-
-**Query Parameters:**
-- `q` (required): Search query
-- `near` (optional): `lat,lng` for nearby search
-
-**Response:**
-```json
-[
-  {
-    "id": "ChIJ...",
-    "text": "Trader Joe's - Queen Anne",
-    "lat": 47.63,
-    "lng": -122.36
-  }
-]
-```
-
-### GET /api/routines
-
-Get all routines.
-
-### POST /api/routines
-
-Create a new routine.
-
-### GET /api/healthz
-
-Health check endpoint.
-
-## Run Modes
-
-### STUB Mode
-
-When API keys are missing, the system automatically switches to deterministic stubs:
-
-- **Google Maps ETAs**: `{DRIVE: 1500, TRANSIT: 1675, WALK: 4200}`
-- **Weather**: Random precipitation with 30% probability
-- **Places**: Static list of 5 common locations
-
-Set `USE_STUBS=true` to force stub mode, or `USE_STUBS=auto` (default) to auto-detect.
-
-### LIVE Mode
-
-With valid API keys, the system uses:
-- Google Maps Directions API for real-time ETAs
-- OpenWeather One Call API for precipitation forecasts
-- Google Places API for location search
-
-## Core Algorithm
-
-```
-weatherPenalty = precip ? 0.06 : 0.0
-parkingPenalty = venue.parkingBufferMin * 60
-securityPenalty = venue.securityBufferMin * 60
-prep = prefs.prepMinutes * 60
-
-adjustedETA = baseETA * (1 + weatherPenalty) + parkingPenalty + securityPenalty + prep
-leaveBy = arriveBy - adjustedETA
-
-reliability = 0.95 - (precip ? 0.03 : 0.0)
-```
-
-## Testing
-
-```bash
-# Unit tests
-npm run test
-
-# E2E tests
-npm run test:e2e
-
-# Coverage
-npm run test:cov
-```
-
-## Architecture
-
-```
-src/
-├── app.module.ts           # Root module
-├── main.ts                 # Entry point
-├── common/                 # Shared utilities
-│   ├── dto/                # Data transfer objects
-│   ├── filters/            # Exception filters
-│   ├── interceptors/       # Logging interceptor
-│   └── utils/              # Time utilities
-├── prisma/                 # Prisma module
-├── integrations/           # External APIs
-│   ├── google.service.ts   # Google Maps + Places
-│   ├── weather.service.ts  # OpenWeather
-│   └── cache.service.ts    # Redis cache
-├── plan/                   # Core planning logic
-├── places/                 # Places search
-├── preferences/            # User preferences
-└── routines/               # Scheduled routines
-    └── jobs/               # Background jobs
-```
-
-
+Powered by:
+- OpenAI GPT (tool calling)
+- LangChain / LangGraph
+- Deterministic rule engine synergy
